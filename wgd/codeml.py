@@ -93,11 +93,30 @@ def _parse_pair(lines, start):
     x.update({"pair": p, "gene1": a, "gene2": b, "l": l})
     return x
 
+def _find_trees(lines):
+    """
+    Get the dS tree, dN tree and w tree lines from codeml output. The trees
+    follow their headers, so they are found by header and not by a fixed
+    offset from the end of the file (the layout differs between PAML versions).
+    """
+    headers = {'dS tree:': None, 'dN tree:': None, 'w ratios as node labels:': None}
+    for i, line in enumerate(lines):
+        h = line.strip()
+        if h in headers and headers[h] is None:
+            # the tree is on the next non-empty line
+            for nxt in lines[i+1:]:
+                if nxt.strip():
+                    headers[h] = nxt
+                    break
+    if any(v is None for v in headers.values()):
+        raise ValueError("Could not find the dS, dN and w trees in the codeml output")
+    return headers['dS tree:'], headers['dN tree:'], headers['w ratios as node labels:'].replace(' #',': ')
+
 def _parse_tree(codeml_out,kstree_dir, katree_dir, wtree_dir, prefix, parentdir):
     content = []
     with open(codeml_out, "r") as f:
         for i in f.readlines(): content.append(i)
-    ds,dn,w = content[-9],content[-7],content[-4].replace(' #',': ')
+    ds,dn,w = _find_trees(content)
     os.chdir(parentdir)
     _write_basic(ds,os.path.join(kstree_dir,'{}.dS.tree'.format(prefix)))
     _write_basic(dn,os.path.join(katree_dir,'{}.dN.tree'.format(prefix)))

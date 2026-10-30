@@ -306,7 +306,9 @@ def _focus(families, sequences, outdir, tmpdir, nthreads, to_stop, cds, table, s
     if ks:
         s = mergeMultiRBH_seqs(seqs)
         fams = read_gene_families(families)
-        fams = get_gene_families(s, fams, pairwise=pairwise, strip_gaps=False, tree_method=tree_method)
+        # GeneFamily defaults to the iqtree option '-m LG', which FastTree rejects
+        fams = get_gene_families(s, fams, pairwise=pairwise, strip_gaps=False, tree_method=tree_method,
+                tree_options="-m LG" if tree_method == "iqtree" else None)
         ksdb = KsDistributionBuilder(fams, s, n_threads=nthreads)
         ksdb.get_distribution()
         prefix = os.path.basename(families)
