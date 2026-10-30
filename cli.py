@@ -55,6 +55,8 @@ def cli(verbosity):
     help="don't translate through STOP codons")
 @click.option('--cds', is_flag=True,
     help="enforce proper CDS sequences")
+@click.option('--table', type=int, default=1, show_default=True,
+    help="NCBI translation table id (e.g. 12 for the CTG clade); sets codeml icode accordingly")
 @click.option('--focus','-f', default=None,
     help="Species whose WGD is to be dated")
 @click.option('--anchorpoints', '-ap', default=None, show_default=True,
@@ -117,12 +119,12 @@ def dmd(**kwargs):
     """
     _dmd(**kwargs)
 
-def _dmd(sequences, outdir, tmpdir, prot, cscore, inflation, eval, to_stop, cds, focus, anchorpoints, keepfasta, keepduplicates, globalmrbh, nthreads, orthoinfer, onlyortho, getnsog, tree_method, treeset, msogcut, geneassign, seq2assign, fam2assign, concat, segments, listelements, collinearcoalescence, testsog, bins, buscosog, buscohmm, buscocutoff, genetable, normalizedpercent, nonormalization, ogformat):
+def _dmd(sequences, outdir, tmpdir, prot, cscore, inflation, eval, to_stop, cds, table, focus, anchorpoints, keepfasta, keepduplicates, globalmrbh, nthreads, orthoinfer, onlyortho, getnsog, tree_method, treeset, msogcut, geneassign, seq2assign, fam2assign, concat, segments, listelements, collinearcoalescence, testsog, bins, buscosog, buscohmm, buscocutoff, genetable, normalizedpercent, nonormalization, ogformat):
     from wgd.core import SequenceData, read_MultiRBH_gene_families,mrbh,ortho_infer,genes2fams,endt,segmentsaps,bsog,parallelrbh
     from joblib import Parallel, delayed
     start = timer()
     if tmpdir != None and not os.path.isdir(tmpdir): os.mkdir(tmpdir)
-    s = [SequenceData(s, out_path=outdir, tmp_path=tmpdir, to_stop=to_stop, cds=cds, cscore=cscore, threads=nthreads, bins=bins, normalizedpercent=normalizedpercent, nonormalization=nonormalization, prot=prot) for s in sequences]
+    s = [SequenceData(s, out_path=outdir, tmp_path=tmpdir, to_stop=to_stop, cds=cds, cscore=cscore, threads=nthreads, bins=bins, normalizedpercent=normalizedpercent, nonormalization=nonormalization, prot=prot, table=table) for s in sequences]
     for i in s: logging.info("tmpdir = {} for {}".format(i.tmp_path,i.prefix))
     if buscosog:
         logging.info("Constructing busco-guided families")
@@ -133,12 +135,12 @@ def _dmd(sequences, outdir, tmpdir, prot, cscore, inflation, eval, to_stop, cds,
         segmentsaps(genetable,listelements,anchorpoints,segments,outdir,s,nthreads,tree_method,treeset,msogcut)
         endt(tmpdir,start,s)
     if geneassign:
-        genes2fams(seq2assign,fam2assign,outdir,s,nthreads,tmpdir,to_stop,cds,cscore,eval,start,normalizedpercent,tree_method,treeset,assign_method='hmmer', prot=prot)
+        genes2fams(seq2assign,fam2assign,outdir,s,nthreads,tmpdir,to_stop,cds,cscore,eval,start,normalizedpercent,tree_method,treeset,assign_method='hmmer', prot=prot, table=table)
     if orthoinfer:
         logging.info("Infering orthologous gene families")
         if not getnsog: logging.info("Note that the option --getnsog can be set to further retrieve nested single-copy gene families")
         if not testsog: logging.info("Note that the option --testsog can be set to verify the inferred single-copy gene families")
-        ortho_infer(sequences,s,outdir,tmpdir,to_stop,cds,cscore,inflation,eval,nthreads,getnsog,tree_method,treeset,msogcut,concat,testsog,normalizedpercent,bins=bins,nonormalization=nonormalization)
+        ortho_infer(sequences,s,outdir,tmpdir,to_stop,cds,cscore,inflation,eval,nthreads,getnsog,tree_method,treeset,msogcut,concat,testsog,normalizedpercent,bins=bins,nonormalization=nonormalization,table=table)
         if onlyortho: endt(tmpdir,start,s)
     if len(s) == 0:
         logging.error("No sequences provided!")
@@ -166,6 +168,8 @@ def _dmd(sequences, outdir, tmpdir, prot, cscore, inflation, eval, to_stop, cds,
 @click.option('--nthreads', '-n', default=4, show_default=True,help="number of threads to use")
 @click.option('--to_stop', is_flag=True,help="don't translate through STOP codons")
 @click.option('--cds', is_flag=True,help="enforce proper CDS sequences")
+@click.option('--table', type=int, default=1, show_default=True,
+    help="NCBI translation table id (e.g. 12 for the CTG clade); sets codeml icode accordingly")
 @click.option('--strip_gaps', is_flag=True,help="remove all gap-containing columns in the alignment")
 @click.option('--aligner', '-a', default="mafft", show_default=True,type=click.Choice(['muscle', 'prank', 'mafft']), help='aligner program to use')
 @click.option('--tree_method', '-tree',type=click.Choice(['fasttree', 'iqtree', 'mrbayes']),default='fasttree',show_default=True,help="tree inference method")
@@ -223,7 +227,7 @@ def focus(**kwargs):
     """
     _focus(**kwargs)
 
-def _focus(families, sequences, outdir, tmpdir, nthreads, to_stop, cds, strip_gaps, aligner, tree_method, treeset, concatenation, coalescence, speciestree, dating, datingset, nsites, outgroup, partition, aamodel, ks, annotation, pairwise, eggnogdata, pfam, dmnb, hmm, evalue, exepath, fossil, rootheight, chainset, beastlgjar, beagle, protdating, protcocdating):
+def _focus(families, sequences, outdir, tmpdir, nthreads, to_stop, cds, table, strip_gaps, aligner, tree_method, treeset, concatenation, coalescence, speciestree, dating, datingset, nsites, outgroup, partition, aamodel, ks, annotation, pairwise, eggnogdata, pfam, dmnb, hmm, evalue, exepath, fossil, rootheight, chainset, beastlgjar, beagle, protdating, protcocdating):
     from wgd.core import SequenceData, read_gene_families, get_gene_families, KsDistributionBuilder
     from wgd.core import mergeMultiRBH_seqs, read_MultiRBH_gene_families, get_MultipRBH_gene_families, Concat, _Codon2partition_, Coale, Run_MCMCTREE, Run_r8s, Reroot, eggnog, hmmer_pfam, interproscan, Run_BEAST, get_only_protaln, Run_MCMCTREE_concprot, Concat_prot, Parallel_MCMCTREE_Prot, endt
     start = timer()
@@ -237,7 +241,7 @@ def _focus(families, sequences, outdir, tmpdir, nthreads, to_stop, cds, strip_ga
     if len(sequences) < 2:
         logging.error("Please provide at least three sequence files for constructing trees")
         exit(0)
-    seqs = [SequenceData(s, tmp_path=tmpdir, out_path=outdir,to_stop=to_stop, cds=cds, threads=nthreads) for s in sequences]
+    seqs = [SequenceData(s, tmp_path=tmpdir, out_path=outdir,to_stop=to_stop, cds=cds, threads=nthreads, table=table) for s in sequences]
     for s in seqs: logging.info("tmpdir = {} for {}".format(s.tmp_path,s.prefix))
     fams = read_MultiRBH_gene_families(families)
     if nthreads < len(fams): logging.info("{} threads are used for {} gene families\nNote that adding threads can significantly accelerate the analysis".format(int(nthreads),int(len(fams))))
@@ -422,6 +426,8 @@ def _peak(ks_distribution, anchorpoints, outdir, alignfilter, ksrange, bin_width
     help="don't translate through STOP codons")
 @click.option('--cds', is_flag=True,
     help="enforce proper CDS sequences")
+@click.option('--table', type=int, default=1, show_default=True,
+    help="NCBI translation table id (e.g. 12 for the CTG clade); sets codeml icode accordingly")
 @click.option('--pairwise', is_flag=True,
     help="run codeml on all gene pairs separately")
 @click.option('--strip_gaps', is_flag=True,
@@ -472,7 +478,7 @@ def ksd(**kwargs):
     """
     _ksd(**kwargs)
 
-def _ksd(families, sequences, outdir, tmpdir, nthreads, to_stop, cds, pairwise,
+def _ksd(families, sequences, outdir, tmpdir, nthreads, to_stop, cds, table, pairwise,
         strip_gaps, aligner, aln_options, tree_method, tree_options, node_average, spair, speciestree, reweight, onlyrootout, extraparanomeks, anchorpoints, plotkde, plotapgmm, plotelmm, components,xlim,ylim,adjustortho,adjustfactor,okalpha,focus2all,kstree,onlyconcatkstree,classic,toparrow, bootstrap):
     from wgd.core import get_gene_families, SequenceData, KsDistributionBuilder
     from wgd.core import read_gene_families, merge_seqs, get_MultipRBH_gene_families, getconcataln, endt
@@ -485,7 +491,7 @@ def _ksd(families, sequences, outdir, tmpdir, nthreads, to_stop, cds, pairwise,
     if len(sequences) == 2:
         tree_method = "cluster"  # for RBH others don't make sense (and crash)
     seqs = [SequenceData(s, tmp_path=tmpdir, out_path=outdir,
-            to_stop=to_stop, cds=cds, threads=nthreads) for s in sequences]
+            to_stop=to_stop, cds=cds, threads=nthreads, table=table) for s in sequences]
     spgenemap = {}
     for i in seqs: spgenemap.update(i.spgenemap())
     if not (speciestree is None) and kstree:

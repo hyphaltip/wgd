@@ -58,22 +58,31 @@ def write_seq(fam,og,seq,seqtype):
         for sp,gids in og.items():
             for gid in gids.split(', '): f.write('>{0}\n{1}\n'.format(gid,seq[sp][gid].seq))
 
-def write_seq_translate(fam,og,seq,to_stop,cds):
+def write_seq_translate(fam,og,seq,to_stop,cds,table=1):
     """
     og is a series
     """
     og = og.dropna()
     with open(fam+'.'+'pep','w') as f:
         for sp,gids in og.items():
-            for gid in gids.split(', '): f.write('>{0}\n{1}\n'.format(gid,seq[sp][gid].translate(to_stop=to_stop,cds=cds,id=gid).seq))
+            for gid in gids.split(', '): f.write('>{0}\n{1}\n'.format(gid,seq[sp][gid].translate(table=table,to_stop=to_stop,cds=cds,id=gid).seq))
 
-def write_seq_translate_fammode(fam,fseq,to_stop,cds,pepdir):
+def write_seq_translate_fammode(fam,fseq,to_stop,cds,pepdir,table=1):
     """
     original seq translation
     """
     with open(os.path.join(pepdir,fam+'.'+'pep'),'w') as f:
         for record in SeqIO.parse(fseq, 'fasta'):
-            f.write(">{0}\n{1}\n".format(record.id,record.translate(to_stop=to_stop,cds=cds,id=record.id).seq))
+            f.write(">{0}\n{1}\n".format(record.id,record.translate(table=table,to_stop=to_stop,cds=cds,id=record.id).seq))
+
+def parse_translation_parameters(para):
+    """
+    Parse the 'Translation parameters:' config value, 'to_stop,cds' with an
+    optional NCBI translation table id as third field ('to_stop,cds,table').
+    """
+    fields = [x.strip() for x in para.split(',')]
+    table = int(fields[2]) if len(fields) > 2 else 1
+    return fields[0], fields[1], table
 
 def find_singleton(og):
     """
@@ -374,8 +383,8 @@ class Config_Hauler:
             logging.info("Writing translated sequences per family")
             OGSEQPEP_dir = _mkdir(os.path.join(self.outdir,"OG_SEQ_TRANSLATE"))
             os.chdir(OGSEQPEP_dir)
-            to_stop,cds = self.para['Translation parameters:'].split(',') 
-            Parallel(n_jobs=self.threads,backend='multiprocessing')(delayed(write_seq_translate)(Fam_list[i],self.OG.loc[Fam_list[i],:],self.SEQ,to_stop,cds) for i in trange(len(Fam_list)))
+            to_stop,cds,table = parse_translation_parameters(self.para['Translation parameters:'])
+            Parallel(n_jobs=self.threads,backend='multiprocessing')(delayed(write_seq_translate)(Fam_list[i],self.OG.loc[Fam_list[i],:],self.SEQ,to_stop,cds,table) for i in trange(len(Fam_list)))
             self.Fam_path = {i:os.path.join(OGSEQPEP_dir,i+'.pep') for i in Fam_list}
             os.chdir(parent)
 
@@ -387,8 +396,8 @@ class Config_Hauler:
         if self.para['Translation:'] == 'yes' and self.para['Sequences type:'] == 'nucleotide':
             logging.info("Writing translated sequences per family")
             OGSEQPEP_dir = _mkdir(os.path.join(self.outdir,"OG_SEQ_TRANSLATE"))
-            to_stop,cds = self.para['Translation parameters:'].split(',')
-            Parallel(n_jobs=self.threads,backend='multiprocessing')(delayed(write_seq_translate_fammode)(Fam_list[i],self.Fam_path[Fam_list[i]],to_stop,cds,OGSEQPEP_dir) for i in trange(len(Fam_list)))
+            to_stop,cds,table = parse_translation_parameters(self.para['Translation parameters:'])
+            Parallel(n_jobs=self.threads,backend='multiprocessing')(delayed(write_seq_translate_fammode)(Fam_list[i],self.Fam_path[Fam_list[i]],to_stop,cds,OGSEQPEP_dir,table) for i in trange(len(Fam_list)))
             self.Fam_path = {i:os.path.join(OGSEQPEP_dir,i+'.pep') for i in Fam_list}
 
     def aligning(self):
