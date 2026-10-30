@@ -14,7 +14,9 @@ def _write_cds(path, seq="ATGAAACTGGGTAAATAA"):
 
 def test_ncbi_table_to_icode():
     assert ncbi_table_to_icode(1) == 0
+    assert ncbi_table_to_icode(10) == 7
     assert ncbi_table_to_icode(12) == 8
+    assert ncbi_table_to_icode(15) == 10
     assert ncbi_table_to_icode("12") == 8
     with pytest.raises(ValueError):
         ncbi_table_to_icode(99)
@@ -32,7 +34,7 @@ def test_sequencedata_table(tmpdir):
     assert str(d1.pro_sequence["sp.fa_00000"]) == "MKLGK"
     assert str(d12.pro_sequence["sp.fa_00000"]) == "MKSGK"
     with pytest.raises(ValueError):
-        SequenceData(fa, table=15, **kw)
+        SequenceData(fa, table=14, **kw)
 
 
 def test_codeml_icode(tmpdir):
