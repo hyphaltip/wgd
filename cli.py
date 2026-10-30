@@ -18,6 +18,14 @@ warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
 
 
 # CLI entry point
+def _check_table(ctx, param, value):
+    from wgd.codeml import ncbi_table_to_icode
+    try:
+        ncbi_table_to_icode(value)
+    except ValueError as e:
+        raise click.BadParameter(str(e))
+    return value
+
 @click.group(context_settings={'help_option_names': ['-h', '--help']})
 @click.option('--verbosity', '-v', type=click.Choice(['info', 'debug']),
     default='info', help="Verbosity level, default = info.")
@@ -55,7 +63,7 @@ def cli(verbosity):
     help="don't translate through STOP codons")
 @click.option('--cds', is_flag=True,
     help="enforce proper CDS sequences")
-@click.option('--table', type=int, default=1, show_default=True,
+@click.option('--table', type=int, default=1, show_default=True, callback=_check_table,
     help="NCBI translation table id (e.g. 12 for the CTG clade); sets codeml icode accordingly")
 @click.option('--focus','-f', default=None,
     help="Species whose WGD is to be dated")
@@ -168,7 +176,7 @@ def _dmd(sequences, outdir, tmpdir, prot, cscore, inflation, eval, to_stop, cds,
 @click.option('--nthreads', '-n', default=4, show_default=True,help="number of threads to use")
 @click.option('--to_stop', is_flag=True,help="don't translate through STOP codons")
 @click.option('--cds', is_flag=True,help="enforce proper CDS sequences")
-@click.option('--table', type=int, default=1, show_default=True,
+@click.option('--table', type=int, default=1, show_default=True, callback=_check_table,
     help="NCBI translation table id (e.g. 12 for the CTG clade); sets codeml icode accordingly")
 @click.option('--strip_gaps', is_flag=True,help="remove all gap-containing columns in the alignment")
 @click.option('--aligner', '-a', default="mafft", show_default=True,type=click.Choice(['muscle', 'prank', 'mafft']), help='aligner program to use')
@@ -426,7 +434,7 @@ def _peak(ks_distribution, anchorpoints, outdir, alignfilter, ksrange, bin_width
     help="don't translate through STOP codons")
 @click.option('--cds', is_flag=True,
     help="enforce proper CDS sequences")
-@click.option('--table', type=int, default=1, show_default=True,
+@click.option('--table', type=int, default=1, show_default=True, callback=_check_table,
     help="NCBI translation table id (e.g. 12 for the CTG clade); sets codeml icode accordingly")
 @click.option('--pairwise', is_flag=True,
     help="run codeml on all gene pairs separately")

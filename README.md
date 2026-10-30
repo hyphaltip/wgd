@@ -299,7 +299,7 @@ wgd dmd sequences (option)
 -e, --eval, the e-value cut-off for similarity in diamond and/or hmmer, default 1e-10
 --to_stop, flag option, whether to translate through STOP codons, if the flag was set, translation will be terminated at the first in-frame stop codon, else a full translation continuing on passing any stop codons would be initiated
 --cds, flag option, whether to only translate the complete CDS that starts with a valid start codon and only contains a single in-frame stop codon at the end and must be dividable by three, if the flag was set, only the complete CDS would be translated
---table, the NCBI translation table id used to translate coding sequences and as the genetic code for codeml (`icode`), default 1, e.g. 12 for the alternative yeast nuclear code (CTG clade, codeml `icode = 8`), supported ids: 1, 2, 3, 4, 5, 6, 9, 11, 12, 13
+--table, the NCBI translation table id used to translate coding sequences and as the genetic code for codeml (`icode`), default 1, e.g. 12 for the alternative yeast nuclear code (CTG clade, codeml `icode = 8`), supported ids: 1, 2, 3, 4, 5, 6, 9, 11, 12, 13. The same table is applied to all input species, so do not mix species with different genetic codes in one run
 -f, --focus, the species to be merged on local MRBHs, default None, if None was given, the local MRBHs wouldn't be inferred
 -ap, --anchorpoints, the anchor points data file from i-adhore for constructing the orthogroups with anchor pairs, default None
 -sm, --segments, the segments datafile used in collinear coalescence analysis if initiated, default None
@@ -339,7 +339,7 @@ wgd focus families sequences (option)
 -n, --nthreads, the number of threads to use, default 4
 --to_stop, flag option, whether to translate through STOP codons, if the flag was set, translation will be terminated at the first in-frame stop codon, else a full translation continuing on past any stop codons would be initiated
 --cds, flag option, whether to only translate the complete CDS that starts with a valid start codon and only contains a single in-frame stop codon at the end and must be dividable by three, if the flag was set, only the complete CDS would be translated
---table, the NCBI translation table id used to translate coding sequences and as the genetic code for codeml (`icode`), default 1, e.g. 12 for the alternative yeast nuclear code (CTG clade, codeml `icode = 8`), supported ids: 1, 2, 3, 4, 5, 6, 9, 11, 12, 13
+--table, the NCBI translation table id used to translate coding sequences and as the genetic code for codeml (`icode`), default 1, e.g. 12 for the alternative yeast nuclear code (CTG clade, codeml `icode = 8`), supported ids: 1, 2, 3, 4, 5, 6, 9, 11, 12, 13. The same table is applied to all input species, so do not mix species with different genetic codes in one run
 --strip_gaps, flag option, whether to drop all gaps in multiple sequence alignment, if the flag was set, all gaps would be dropped
 -a, --aligner, which alignment program to use, default mafft
 -tree, --tree_method, which gene tree inference program to invoke, default fasttree
@@ -380,7 +380,7 @@ wgd ksd families sequences (option)
 -n, --nthreads, the number of threads to use, default 4
 --to_stop, flag option, whether to translate through STOP codons, if the flag was set, translation will be terminated at the first in-frame stop codon, else a full translation continuing on past any stop codons would be initiated
 --cds, flag option, whether to only translate the complete CDS that starts with a valid start codon and only contains a single in-frame stop codon at the end and must be dividable by three, if the flag was set, only the complete CDS would be translated
---table, the NCBI translation table id used to translate coding sequences and as the genetic code for codeml (`icode`), default 1, e.g. 12 for the alternative yeast nuclear code (CTG clade, codeml `icode = 8`), supported ids: 1, 2, 3, 4, 5, 6, 9, 11, 12, 13
+--table, the NCBI translation table id used to translate coding sequences and as the genetic code for codeml (`icode`), default 1, e.g. 12 for the alternative yeast nuclear code (CTG clade, codeml `icode = 8`), supported ids: 1, 2, 3, 4, 5, 6, 9, 11, 12, 13. The same table is applied to all input species, so do not mix species with different genetic codes in one run
 --pairwise, flag option, whether to initiate pairwise Ks estimation, if the flag was set, pairwise Ks values would be estimated
 --strip_gaps, flag option, whether to drop all gaps in multiple sequence alignment, if the flag was set, all gaps would be dropped
 -a, --aligner, which alignment program to use, default mafft 

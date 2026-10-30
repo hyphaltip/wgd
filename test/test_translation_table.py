@@ -3,7 +3,7 @@ import pytest
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from wgd.codeml import Codeml, ncbi_table_to_icode
-from wgd.core import SequenceData, GeneFamily
+from wgd.core import SequenceData, GeneFamily, get_gene_families
 from wgd.tree import parse_translation_parameters
 
 
@@ -52,3 +52,14 @@ def test_genefamily_icode(tmpdir):
 def test_parse_translation_parameters():
     assert parse_translation_parameters("True,False") == ("True", "False", 1)
     assert parse_translation_parameters("True, False, 12") == ("True", "False", 12)
+
+
+def test_get_gene_families_passes_icode(tmpdir):
+    import pandas as pd
+    fa = os.path.join(str(tmpdir), "sp.fa")
+    with open(fa, "w") as f:
+        f.write(">g1\nATGAAACTGGGTAAATAA\n>g2\nATGAAACTGGGTAAATAA\n")
+    kw = {"out_path": str(tmpdir), "tmp_path": str(tmpdir)}
+    fam = pd.DataFrame({"sp": [["g1", "g2"]]}, index=["GF1"])
+    assert get_gene_families(SequenceData(fa, table=12, **kw), fam)[0].icode == 8
+    assert get_gene_families(SequenceData(fa, **kw), fam)[0].icode == 0

@@ -15,7 +15,8 @@ import matplotlib.pyplot as plt
 # NCBI genetic code id -> PAML codeml `icode`. Only tables with a PAML
 # equivalent are listed. The stop codons accepted by codeml 4.10.10 for each
 # icode were checked, and icode 8 was checked to translate CTG differently
-# from icode 0.
+# from icode 0. A review run compared the full codeml codon tables with
+# Biopython for these entries. Only one genetic code applies to all inputs.
 NCBI_TO_ICODE = {
     1: 0,    # standard
     2: 1,    # vertebrate mitochondrial
