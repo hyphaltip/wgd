@@ -16,7 +16,7 @@ from Bio.Data.CodonTable import TranslationError
 from Bio import Phylo
 from joblib import Parallel, delayed
 from concurrent.futures import ProcessPoolExecutor
-from wgd.codeml import Codeml
+from wgd.codeml import Codeml, ncbi_table_to_icode
 from wgd.cluster import cluster_ks #fastcluster is not compatible with some versions of numpy which causes problems for python3.8 and higher
 from wgd.mcmctree import mcmctree
 from wgd.beast import beast
@@ -267,12 +267,14 @@ class SequenceData:
     """
     def __init__(self, cds_fasta,
             tmp_path=None, out_path="wgd_dmd",
-            to_stop=True, cds=True, cscore=None,threads = 4, bins = 100, normalizedpercent = 5, nonormalization=False, prot = False):
+            to_stop=True, cds=True, cscore=None,threads = 4, bins = 100, normalizedpercent = 5, nonormalization=False, prot = False, table=1):
         if tmp_path == None:
             tmp_path = "wgdtmp_" + str(uuid.uuid4())
         else:
             tmp_path = tmp_path + "/"+ "wgdtmp_" + str(uuid.uuid4())
         self.np = normalizedpercent
+        self.table = table  # NCBI translation table id
+        self.icode = ncbi_table_to_icode(table)  # matching codeml icode
         self.tmp_path  = _mkdir(tmp_path)
         self.out_path  = _mkdir(out_path)
         self.cds_fasta = cds_fasta
@@ -325,7 +327,7 @@ class SequenceData:
         for i, record in enumerate(SeqIO.parse(self.cds_fasta, 'fasta')):
             gid = "{0}_{1:0>5}".format(self.prefix, i)
             try:
-                aa_seq = record.translate(to_stop=to_stop, cds=cds, id=record.id,
+                aa_seq = record.translate(table=self.table, to_stop=to_stop, cds=cds, id=record.id,
                                        stop_symbol="")
                 aa_sequence = aa_seq.seq
                 na_sequence = record.seq
@@ -625,6 +627,7 @@ def get_gene_families(seqs, families, rename=True, **kwargs):
     and one-to-one orthologs), but it should easily generalize to arbitrary
     gene families.
     """
+    kwargs.setdefault('icode', seqs.icode)
     gene_families = []
     for fid in families.index:
         family = []
@@ -1144,16 +1147,16 @@ def getconcataln(seqs, families, nthreads, outdir, sptree, spgenemap, onlyconcat
         caln_tmppaths.append(_mkdir(os.path.join(caln_tmppath,"Concatenated")))
         fam_ids.append("Concatenated")
         treefs.append(sptree)
-        Parallel(n_jobs=nthreads,backend='multiprocessing')(delayed(getalnks)(calns[i],caln_tmppaths[i],treefs[i],kstree_dir,katree_dir,wtree_dir,fam_ids[i]) for i in range(len(calns)))
+        Parallel(n_jobs=nthreads,backend='multiprocessing')(delayed(getalnks)(calns[i],caln_tmppaths[i],treefs[i],kstree_dir,katree_dir,wtree_dir,fam_ids[i],s.icode) for i in range(len(calns)))
     else:
         logging.info("Calculate only for concatenated MSA")
-        getalnks(caln,_mkdir(os.path.join(caln_tmppath,"Concatenated")),sptree,kstree_dir,katree_dir,wtree_dir,"Concatenated")
+        getalnks(caln,_mkdir(os.path.join(caln_tmppath,"Concatenated")),sptree,kstree_dir,katree_dir,wtree_dir,"Concatenated",s.icode)
     out = sp.run(["rm", "-r", caln_tmppath], stdout=sp.PIPE, stderr=sp.PIPE)
     out = sp.run(["rm", "-r", concatf], stdout=sp.PIPE, stderr=sp.PIPE)
 
-def getalnks(caln,tmp_path,sptree,kstree_dir,katree_dir,wtree_dir,gfid):
+def getalnks(caln,tmp_path,sptree,kstree_dir,katree_dir,wtree_dir,gfid,icode=0):
     #codeml = Codeml(caln, exe="codeml", tmp=tmp_path, prefix="Concatenated",treefile=os.path.abspath(sptree))
-    codeml = Codeml(caln, exe="codeml", tmp=tmp_path, prefix=gfid, treefile=os.path.abspath(sptree))
+    codeml = Codeml(caln, exe="codeml", tmp=tmp_path, prefix=gfid, treefile=os.path.abspath(sptree), icode=icode)
     result = codeml.run_codeml(preserve=True, times=1, kstree_dir=kstree_dir,katree_dir=katree_dir,wtree_dir=wtree_dir)
 
 def get_MultipRBH_gene_families(seqs, fams, tree_method, treeset, outdir,nthreads, option="--auto", runtree=False, **kwargs):
@@ -2114,12 +2117,12 @@ def rmtmp(tmpdir,outdir,querys):
 def dmd4g2f(outdir,s,nthreads,querys,df):
     return None
 
-def genes2fams(seq2assign,fam2assign,outdir,s,nthreads,tmpdir,to_stop,cds,cscore,eval,start,normalizedpercent,tree_method,treeset,assign_method='hmmer',prot=False):
+def genes2fams(seq2assign,fam2assign,outdir,s,nthreads,tmpdir,to_stop,cds,cscore,eval,start,normalizedpercent,tree_method,treeset,assign_method='hmmer',prot=False,table=1):
     Noldsp = [i.prefix for i in s]
     gsmap = {}
     for seq in s: gsmap.update({gid:seq.prefix for gid in seq.idmap.keys()})
     logging.info("Assigning sequences into given gene families")
-    seqs_query = [SequenceData(s, out_path=outdir, tmp_path=tmpdir, to_stop=to_stop, cds=cds, cscore=cscore, threads=nthreads, normalizedpercent=normalizedpercent,prot=prot) for s in seq2assign]
+    seqs_query = [SequenceData(s, out_path=outdir, tmp_path=tmpdir, to_stop=to_stop, cds=cds, cscore=cscore, threads=nthreads, normalizedpercent=normalizedpercent,prot=prot,table=table) for s in seq2assign]
     for seq in seqs_query: gsmap.update({gid:seq.prefix for gid in seq.idmap.keys()})
     Nnewsp = [i.prefix for i in seqs_query]
     df = pd.read_csv(fam2assign,header=0,index_col=0,sep='\t')
@@ -2171,13 +2174,13 @@ def concatcdss(sequences,outdir):
     #with open(Concat_cdsf,'w') as f: f.write(out.stdout.decode('utf-8'))
     return Concat_cdsf
 
-def ortho_infer(sequences,s,outdir,tmpdir,to_stop,cds,cscore,inflation,eval,nthreads,getsog,tree_method,treeset,msogcut,concat,testsog,normalizedpercent,bins=100,nonormalization=False):
+def ortho_infer(sequences,s,outdir,tmpdir,to_stop,cds,cscore,inflation,eval,nthreads,getsog,tree_method,treeset,msogcut,concat,testsog,normalizedpercent,bins=100,nonormalization=False,table=1):
     s0_orig = copy.deepcopy(s[0])
     if concat:
         sgidmaps = {}
         for x in s : sgidmaps.update(x.spgenemap())
         Concat_cdsf = concatcdss(sequences,outdir)
-        ss = SequenceData(Concat_cdsf, out_path=outdir, tmp_path=tmpdir, to_stop=to_stop, cds=cds, cscore=cscore, threads=nthreads, bins=bins, normalizedpercent=normalizedpercent,nonormalization=nonormalization)
+        ss = SequenceData(Concat_cdsf, out_path=outdir, tmp_path=tmpdir, to_stop=to_stop, cds=cds, cscore=cscore, threads=nthreads, bins=bins, normalizedpercent=normalizedpercent,nonormalization=nonormalization,table=table)
         logging.info("tmpdir = {} for {}".format(ss.tmp_path,ss.prefix))
         #memory_reporter()
         ss.get_paranome(inflation=inflation, eval=eval, savememory = True,sgidmaps = sgidmaps)
@@ -3049,7 +3052,7 @@ class GeneFamily:
             aligner="mafft", tree_method="cluster", ks_method="GY94",
             eq_freq="F3X4", kappa=None, prequal=False, strip_gaps=False,
             min_length=3, codeml_iter=1, aln_options="--auto", 
-            tree_options="-m LG", pairwise=False):
+            tree_options="-m LG", pairwise=False, icode=0):
         self.id = gfid
         self.cds_seqs = cds
         self.pro_seqs = pro
@@ -3078,6 +3081,7 @@ class GeneFamily:
         self.aln_options = aln_options
         self.tree_options = tree_options
         self.pairwise = pairwise
+        self.icode = icode  # codeml genetic code
 
     def get_ks(self):
         logging.info("Analysing family {}".format(self.id))
@@ -3158,7 +3162,7 @@ class GeneFamily:
             self.cds_aln = _strip_gaps(self.cds_aln)
 
     def run_codeml(self):
-        codeml = Codeml(self.cds_aln, exe="codeml", tmp=self.tmp_path, prefix=self.id)
+        codeml = Codeml(self.cds_aln, exe="codeml", tmp=self.tmp_path, prefix=self.id, icode=self.icode)
         # TODO, do something with `no_result`
         if self.pairwise:
             result, no_result = codeml.run_codeml_pairwise(

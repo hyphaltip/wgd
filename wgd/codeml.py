@@ -12,6 +12,40 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 
+# NCBI genetic code id -> PAML codeml `icode`. Only tables with a PAML
+# equivalent are listed. The stop codons accepted by codeml 4.10.10 for each
+# icode were checked, and icode 8 was checked to translate CTG differently
+# from icode 0. Tables 10 and 15 were compared codon by codon (all 64) with
+# the codeml 4.10.10 codon tables and Biopython; the other entries were
+# compared in a review run. Only one genetic code applies to all inputs.
+NCBI_TO_ICODE = {
+    1: 0,    # standard
+    2: 1,    # vertebrate mitochondrial
+    3: 2,    # yeast mitochondrial
+    4: 3,    # mold, protozoan, coelenterate mitochondrial
+    5: 4,    # invertebrate mitochondrial
+    6: 5,    # ciliate, dasycladacean, hexamita nuclear
+    9: 6,    # echinoderm and flatworm mitochondrial
+    10: 7,   # euplotid nuclear
+    11: 0,   # bacterial, archaeal, plant plastid (same translation as 1)
+    12: 8,   # alternative yeast nuclear (CTG clade, CTG = Ser)
+    13: 9,   # ascidian mitochondrial
+    15: 10,  # blepharisma nuclear
+}
+
+def ncbi_table_to_icode(table):
+    """
+    Convert an NCBI genetic code id to the codeml `icode` option.
+
+    :param table: NCBI translation table id (e.g. 1 or 12)
+    :return: codeml icode
+    """
+    try:
+        return NCBI_TO_ICODE[int(table)]
+    except (KeyError, ValueError):
+        raise ValueError("NCBI translation table {} is not supported; supported: {}".format(
+            table, sorted(NCBI_TO_ICODE)))
+
 GAPS = ["-", "?", "X"]  # these should be treated as gaps
 
 def _strip_gaps(aln):
