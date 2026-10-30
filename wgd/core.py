@@ -382,11 +382,18 @@ class SequenceData:
         self.dmd_hits.update(other.dmd_hits)
 
     def make_diamond_db(self):
+        # Parallel workers share one database per species. Build it under a
+        # process-specific name and rename it, so that no worker can open a
+        # database which another worker is still writing.
         if not os.path.isfile(self.pro_db + '.dmnd'):
-            cmd = ["diamond", "makedb", "--in", self.pro_fasta, "-d", self.pro_db, "-p", str(self.threads)]
+            tmp_db = "{}.{}".format(self.pro_db, os.getpid())
+            cmd = ["diamond", "makedb", "--in", self.pro_fasta, "-d", tmp_db, "-p", str(self.threads)]
             out = sp.run(cmd, stdout=sp.PIPE, stderr=sp.PIPE)
             logging.debug(out.stderr.decode())
-            if out.returncode == 1: logging.error(out.stderr.decode())
+            if out.returncode != 0:
+                logging.error(out.stderr.decode())
+                return
+            os.replace(tmp_db + '.dmnd', self.pro_db + '.dmnd')
 
     def run_diamond(self, seqs, orthoinfer, eval=1e-10, savememory=False, sgidmaps=None):
         self.merge_gene_length(seqs)
